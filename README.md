@@ -74,6 +74,7 @@ local ParticleEmitter = CreateParticleEmitter({
 
 - [ ] Function documentation
 - [ ] Examples folder
+- [ ] React wrapper
 
 ### Short Term
 
