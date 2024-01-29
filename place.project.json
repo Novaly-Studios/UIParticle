@@ -1,0 +1,14 @@
+{
+	"name": "UIParty",
+	"tree": {
+		"$className": "DataModel",
+		"ReplicatedFirst": {
+			"$ignoreUnknownInstances": true,
+			"$className": "ReplicatedFirst",
+			"$path": "Packages",
+			"UIParty": {
+				"$path": "src"
+			}
+		}
+	}
+}
