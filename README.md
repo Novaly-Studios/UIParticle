@@ -70,10 +70,20 @@ local ParticleEmitter = CreateParticleEmitter({
 
 ## Todo
 
+### Important
+
+- [ ] Function documentation
 - [ ] Examples folder
-- [ ] Preset emission shapes (Radial, Rectangular, ...)
+
+### Short Term
+
 - [ ] Paths (Linear, Bezier, Cubic, Spring, instead of only physics-based)
+- [ ] Preset emission shapes (Radial, Rectangular, ...)
 - [ ] Framerate-based emission downscaling
 - [ ] Multithreaded update support
+
+### Long Term
+
+- [ ] Other particle types (e.g. Text, Lightning, Water, Polygonal)
 - [ ] Density combination
 - [ ] Collisions
