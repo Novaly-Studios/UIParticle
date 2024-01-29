@@ -64,6 +64,8 @@ type Texture = {
     ID: string;
 
     SpriteSheet: {
+        RandomStart: boolean?;
+        TotalFrames: number?; -- Useful if you want to use a subset of the sprite sheet or the last row is not full.
         Duration: number;
         Bounce: boolean?;
         Cells: Vector2;
@@ -88,7 +90,8 @@ type Particle = {
 type ParticleState = {
     ParticleDefinition: Particle;
 
-    _CellSize: Vector2?;
+    _SpriteSheetFrameOffset: number;
+    _SpriteSheetCellSize: Vector2?;
 
     _Acceleration: Vector2;
     _LastUpdate: number;
@@ -208,8 +211,8 @@ local function ParticleEmitter(Config: EmitterConfig)
                 local Cycle = Elapsed // Duration
                 local Cells = SpriteSheet.Cells
                 local TotalFrames = SpriteSheet.TotalFrames or (Cells.X * Cells.Y)
-                local CellSize = Active._CellSize
-                local Frame = ((Elapsed * TotalFrames) // Duration) % TotalFrames
+                local CellSize = Active._SpriteSheetCellSize
+                local Frame = ((Elapsed * TotalFrames) // Duration + Active._SpriteSheetFrameOffset) % TotalFrames
 
                 if (Bounce and Cycle % 2 == 1) then
                     Frame = TotalFrames - Frame - 1
@@ -270,10 +273,11 @@ local function ParticleEmitter(Config: EmitterConfig)
                 RandomGen:NextNumber(VelocityMin.X, VelocityMax.X),
                 RandomGen:NextNumber(VelocityMin.Y, VelocityMax.Y)
             );
+            _SpriteSheetFrameOffset = (SpriteSheet and (SpriteSheet.RandomStart and RandomGen:NextInteger(0, (SpriteSheet.TotalFrames or SpriteSheet.Cells.X * SpriteSheet.Cells.Y) - 1) or 0) or nil);
+            _SpriteSheetCellSize = (SpriteSheet and SpriteSheet.Size / SpriteSheet.Cells or nil);
             _SpriteSheet = SpriteSheet;
             _LastUpdate = StartTime;
             _StartTime = StartTime;
-            _CellSize = (SpriteSheet and SpriteSheet.Size / SpriteSheet.Cells or nil);
             _Position = Position;
             _Lifetime = RandomGen:NextNumber(LifetimeMin, LifetimeMax);
 
@@ -293,7 +297,7 @@ local function ParticleEmitter(Config: EmitterConfig)
         ParticleRoot.SizeConstraint = Enum.SizeConstraint.RelativeYY
 
         if (SpriteSheet) then
-            ParticleRoot.ImageRectSize = FinalParticle._CellSize
+            ParticleRoot.ImageRectSize = FinalParticle._SpriteSheetCellSize
         end
 
         ParticleRoot.Parent = Config.EmitFrom

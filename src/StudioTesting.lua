@@ -1,13 +1,6 @@
-# UIParty
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
+    local CreateParticleEmitter = require(ReplicatedFirst:WaitForChild("UIParty"))
 
-A particle emitter system for Roblox UIs.
-
-## Examples
-
-Baseline demonstration of the library's capabilities:
-
-```lua
-local CreateParticleEmitter = require(...:WaitForChild("UIParty"))
 local RandomGen = Random.new()
 local Colors = {
     {
@@ -27,7 +20,11 @@ local Colors = {
     }
 }
 
-local ParticleEmitter = CreateParticleEmitter({
+if (_G.LastParticleEmitter) then
+    pcall(_G.LastParticleEmitter.Destroy)
+end
+
+_G.LastParticleEmitter = CreateParticleEmitter({
     TimeScale = 2;
     EmitFrom = game.StarterGui.ScreenGui.Frame;
     Rate = 60;
@@ -53,6 +50,7 @@ local ParticleEmitter = CreateParticleEmitter({
                 ID = "rbxassetid://13367535759";
 
                 SpriteSheet = {
+                    RandomStart = false;
                     Duration = 0.75;
                     Cells = Vector2.new(4, 4);
                     Size = Vector2.new(1024, 1024);
@@ -66,24 +64,3 @@ local ParticleEmitter = CreateParticleEmitter({
         };
     end
 })
-```
-
-## Todo
-
-### Important
-
-- [ ] Function documentation
-- [ ] Examples folder
-
-### Short Term
-
-- [ ] Paths (Linear, Bezier, Cubic, Spring, instead of only physics-based) including on colors, size, etc.
-- [ ] Preset emission shapes (Radial, Rectangular, ...)
-- [ ] Framerate-based emission downscaling
-- [ ] Multithreaded update support
-
-### Long Term
-
-- [ ] Other particle types (e.g. Text, Lightning, Water, Polygonal)
-- [ ] Density combination
-- [ ] Collisions
