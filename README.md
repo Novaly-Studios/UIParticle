@@ -85,6 +85,7 @@ local ParticleEmitter = CreateParticleEmitter({
 
 ### Long Term
 
+- [ ] Particle editor plugin
 - [ ] Other particle types (e.g. Text, Lightning, Water, Polygonal)
 - [ ] Density combination
 - [ ] Collisions
