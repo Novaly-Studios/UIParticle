@@ -1,1 +1,1 @@
-{"name":"UIParty","className":"DataModel","filePaths":["place.project.json"],"children":[{"name":"ReplicatedFirst","className":"ReplicatedFirst","children":[{"name":"UIParty","className":"ModuleScript","filePaths":["src\\init.lua"],"children":[{"name":"StudioTesting","className":"ModuleScript","filePaths":["src\\StudioTesting.lua"]}]}]}]}
+{"name":"UIParty","className":"DataModel","filePaths":["place.project.json"],"children":[{"name":"ReplicatedFirst","className":"ReplicatedFirst","children":[{"name":"UIParty","className":"ModuleScript"}]}]}

@@ -74,11 +74,9 @@ local ParticleEmitter = CreateParticleEmitter({
 
 - [ ] Function documentation
 - [ ] Examples folder
-- [ ] React wrapper
 
 ### Short Term
 
-- [ ] Paths (Linear, Bezier, Cubic, Spring, instead of only physics-based) including on colors, size, etc.
 - [ ] Preset emission shapes (Radial, Rectangular, ...)
 - [ ] Framerate-based emission downscaling
 - [ ] Multithreaded update support
@@ -88,4 +86,3 @@ local ParticleEmitter = CreateParticleEmitter({
 - [ ] Particle editor plugin
 - [ ] Other particle types (e.g. Text, Lightning, Water, Polygonal)
 - [ ] Density combination
-- [ ] Collisions
