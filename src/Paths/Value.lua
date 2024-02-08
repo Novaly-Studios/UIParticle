@@ -1,10 +1,10 @@
 --!optimize 2
 --!native
 
-local function CreateSingle<T>(Value: T)
+local function CreateValue<T>(Value: T)
     return function(_ParticleState)
         return Value
     end
 end
 
-return CreateSingle
+return CreateValue

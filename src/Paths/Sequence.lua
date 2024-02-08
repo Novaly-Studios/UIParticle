@@ -41,9 +41,27 @@ local function GetPairOnSequence<T>(Sequence: Sequence<T>, Completion: number): 
     error("Unreachable")
 end
 
-local function CreateSequence<T>(Sequence: Sequence<T>)
+local function CreateSequence<T>(Sequence: Sequence<T> | ColorSequence | NumberSequence)
+    -- Transform the sequence into a table of time-value pairs.
+    -- Roblox-provided sequences will be transformed into this format for performance reasons.
+    local CorrectedSequence: Sequence<T>
+    local SequenceType = typeof(Sequence)
+
+    if (SequenceType == "ColorSequence" or SequenceType == "NumberSequence") then
+        CorrectedSequence = {}
+
+        for Index, Current in (Sequence :: ColorSequence).Keypoints do
+            CorrectedSequence[Index] = {
+                Time = Current.Time;
+                Value = Current.Value;
+            }
+        end
+    else
+        CorrectedSequence = Sequence :: any
+    end
+
     return function(ParticleState: ParticleState): T
-        return GetPairOnSequence(Sequence, ParticleState.Completion)
+        return GetPairOnSequence(CorrectedSequence, ParticleState.Completion)
     end
 end
 

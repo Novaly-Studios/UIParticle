@@ -3,7 +3,7 @@
 
 -- Allows easy command bar paste.
 if (not script) then
-	script = game:GetService("ReplicatedFirst").UIParty.CreateParticleEmitter
+	script = game:GetService("ReplicatedFirst").UIParty
 end
 
 local RunService = game:GetService("RunService")
@@ -314,8 +314,8 @@ local function CreateParticleEmitter(Config: EmitterConfig)
     return self
 end
 
-task.defer(function()
-    local Paths = require(script.Parent.Paths)
+--[[ task.defer(function()
+    local Paths = require(script.Paths)
     local RandomGen = Random.new()
 
     if (_G.LastParticleEmitter) then
@@ -377,6 +377,6 @@ task.defer(function()
             };
         end
     })
-end)
+end) ]]
 
 return CreateParticleEmitter
