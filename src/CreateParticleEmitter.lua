@@ -314,7 +314,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
     return self
 end
 
-task.defer(function()
+--[[ task.defer(function()
     local Paths = require(script.Parent.Paths)
     local RandomGen = Random.new()
 
@@ -377,6 +377,6 @@ task.defer(function()
             };
         end
     })
-end)
+end) ]]
 
 return CreateParticleEmitter
