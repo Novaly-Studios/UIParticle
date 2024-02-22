@@ -13,7 +13,7 @@ local Types = require(script.Parent.Types)
     type ParticleState = Types.ParticleState
     type Particle = Types.Particle
 
-local DefaultTexture = {ID = "rbxassetid://487481260"}
+local DefaultTexture = "rbxassetid://487481260"
 
 local function DefaultTransparency()
     return 0
@@ -55,14 +55,17 @@ local function CreateParticleEmitter(Config: EmitterConfig)
     local _Enabled = true
 
     local _BaseTimeScale = Config.TimeScale or 1
+    local _PreUpdate = Instance.new("BindableEvent")
 
     -- TODO: port all ParticleEmitter Update to one RenderStepped connection.
     local function Update()
+        _PreUpdate:Fire()
+
         local Cleanup
+        local CurrentTime = os.clock()
 
         -- TODO: can easily be multithreaded, convert.
         for Active, Root in _ActiveParticles do
-            local CurrentTime = os.clock()
             local TimeScale = Active.TimeScale
             local Base = Active.ParticleDefinition
 
@@ -80,7 +83,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
                 Elapsed = Lifetime
                 Cleanup = Cleanup or {}
                 table.insert(Cleanup, {Active, Root})
-                -- Still simulate the next frame to ensure it reaches its final visual state.
+                continue
             end
 
             local PreStep = Base.PreStep
@@ -127,22 +130,23 @@ local function CreateParticleEmitter(Config: EmitterConfig)
             local SpriteSheet = Active.SpriteSheet
 
             if (SpriteSheet) then
-                local Duration = SpriteSheet.Duration
-                local Bounce = SpriteSheet.Bounce
-                local Cycle = Elapsed // Duration
-                local Cells = SpriteSheet.Cells
-                local TotalFrames = SpriteSheet.TotalFrames or (Cells.X * Cells.Y)
-                local CellSize = Active.SpriteSheetCellSize
-                local Frame = ((Elapsed * TotalFrames) // Duration + Active.SpriteSheetFrameOffset) % TotalFrames
+                local Completion = math.min(Active.Completion, 0.99999999)
 
-                if (Bounce and Cycle % 2 == 1) then
-                    Frame = TotalFrames - Frame - 1
-                end
+                local Repetitions = SpriteSheet.Repetitions or 1
+                local ImageSize = SpriteSheet.ImageSize
+                local CellSize = SpriteSheet.CellSize
+                local Sheets = SpriteSheet.Sheets
+                local SheetCount = #Sheets
+                local Cells = ImageSize / CellSize
 
-                Root.ImageRectOffset = Vector2.new(
-                    (Frame % Cells.X) * CellSize.X,
-                    (Frame // Cells.Y) * CellSize.Y
-                )
+                local FramesPerRepetition = (Cells.X * Cells.Y) * SheetCount
+                local TotalFrames = Repetitions * FramesPerRepetition - (SpriteSheet.SkipLastFrames or 0)
+                local CurrentRepetitionFrame = math.floor(Completion * TotalFrames) % FramesPerRepetition
+                local SheetIndex = math.min(math.floor(CurrentRepetitionFrame / FramesPerRepetition * SheetCount) + 1, SheetCount)
+                local XOffset = CurrentRepetitionFrame % Cells.X * CellSize.X
+                local YOffset = (CurrentRepetitionFrame // Cells.Y) % Cells.Y * CellSize.Y
+                Root.Image = Sheets[SheetIndex]
+                Root.ImageRectOffset = Vector2.new(XOffset, YOffset)
             end
 
             local PostStep = Base.PostStep
@@ -169,14 +173,13 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         local Position = Particle.Position
         local Lifetime = Particle.Lifetime
         local Texture = Particle.Texture or DefaultTexture
-            local SpriteSheet = Texture.SpriteSheet
+        local SpriteSheet = (type(Texture) == "table" and Texture or nil)
 
         local ParticleRoot = Instance.new("ImageLabel")
         local FinalParticle = {
             ParticleDefinition = Particle;
 
             SpriteSheetFrameOffset = (SpriteSheet and (SpriteSheet.RandomStart and RandomGen:NextInteger(0, (SpriteSheet.TotalFrames or SpriteSheet.Cells.X * SpriteSheet.Cells.Y) - 1) or 0) or nil);
-            SpriteSheetCellSize = (SpriteSheet and SpriteSheet.Size / SpriteSheet.Cells or nil);
             SpriteSheet = SpriteSheet;
 
             Completion = 0;
@@ -196,7 +199,10 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         ParticleRoot.BackgroundTransparency = 1
         ParticleRoot.ImageTransparency = 1
         ParticleRoot.AnchorPoint = Vector2.new(0.5, 0.5)
-        ParticleRoot.Image = Texture.ID
+
+        if (not SpriteSheet) then
+            ParticleRoot.Image = Texture
+        end
 
         local InitialPosition = Position(FinalParticle)
         ParticleRoot.Position = UDim2.fromScale(InitialPosition.X, InitialPosition.Y)
@@ -226,7 +232,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         end
 
         if (SpriteSheet) then
-            ParticleRoot.ImageRectSize = FinalParticle.SpriteSheetCellSize
+            ParticleRoot.ImageRectSize = SpriteSheet.CellSize
         end
 
         ParticleRoot.Parent = Config.EmitFrom
@@ -261,6 +267,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
 
     local _EmitTimer = task.spawn(function()
         local InitialEmit = Config.InitialEmit
+        local WaitEvent = _PreUpdate.Event
 
         if (InitialEmit) then
             Emit(InitialEmit)
@@ -268,12 +275,12 @@ local function CreateParticleEmitter(Config: EmitterConfig)
 
         while (true) do
             if ((not _Enabled) or (_EmitTime == math.huge) or (_EmitCount == 0)) then
-                task.wait()
+                WaitEvent:Wait()
                 continue
             end
 
             while (true) do
-                local New = _Accumulation - _EmitTime
+                local New = (_Accumulation - _EmitTime)
 
                 if (New < 0) then
                     break
@@ -292,7 +299,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
             local NextTime = os.clock()
             _Accumulation += (NextTime - _LastTime)
             _LastTime = NextTime
-            task.wait()
+            WaitEvent:Wait()
         end
     end)
 
@@ -313,70 +320,5 @@ local function CreateParticleEmitter(Config: EmitterConfig)
     self.Create = CreateParticle
     return self
 end
-
---[[ task.defer(function()
-    local Paths = require(script.Parent.Paths)
-    local RandomGen = Random.new()
-
-    if (_G.LastParticleEmitter) then
-        pcall(_G.LastParticleEmitter.Destroy)
-    end
-
-    local Colors = {
-        Paths.Sequence({
-            {Time = 0, Value = Color3.fromRGB(251, 206, 100)};
-            {Time = 0.5, Value = Color3.fromRGB(251, 206, 100)};
-            {Time = 1, Value = Color3.fromRGB(255, 255, 255)};
-        }),
-        Paths.Sequence({
-            {Time = 0, Value = Color3.fromRGB(61, 131, 235)};
-            {Time = 0.5, Value = Color3.fromRGB(61, 131, 235)};
-            {Time = 1, Value = Color3.fromRGB(255, 255, 255)};
-        }),
-        Paths.Sequence({
-            {Time = 0, Value = Color3.fromRGB(235, 139, 61)};
-            {Time = 0.5, Value = Color3.fromRGB(235, 139, 61)};
-            {Time = 1, Value = Color3.fromRGB(255, 255, 255)};
-        })
-    }
-
-    _G.LastParticleEmitter = CreateParticleEmitter({
-        TimeScale = 2;
-        EmitFrom = game.StarterGui.ScreenGui.Frame;
-        Rate = 60;
-
-        ParticleDefinition = function()
-            local Angle = RandomGen:NextNumber(0, math.pi * 2)
-            local Direction = Vector2.new(math.sin(Angle), math.cos(Angle))
-
-            return {
-                Lifetime = 0.75;
-                Texture = {
-                    ID = "rbxassetid://13367535759";
-
-                    SpriteSheet = {
-                        RandomStart = false;
-                        Duration = 0.75;
-                        Cells = Vector2.new(4, 4);
-                        Size = Vector2.new(1024, 1024);
-                    };
-                };
-                Transparency = Paths.Sequence({
-                    {Time = 0, Value = 1};
-                    {Time = 0.1, Value = 0};
-                    {Time = 0.9, Value = 0};
-                    {Time = 1, Value = 1};
-                });
-                Position = Paths.Physics(Vector2.new(0.5, 0.5) + Direction * 0.2, Direction * 0.3, Vector2.zero);
-                Rotation = Paths.Value(-math.deg(Angle));
-                Color = Colors[RandomGen:NextInteger(1, #Colors)];
-                Size = Paths.Sequence({
-                    {Time = 0, Value = Vector2.new(0.4, 0.4)};
-                    {Time = 1, Value = Vector2.new(0.2, 0.2)};
-                });
-            };
-        end
-    })
-end) ]]
 
 return CreateParticleEmitter

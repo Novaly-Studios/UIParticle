@@ -1,17 +1,15 @@
 export type Path<T> = ((any) -> (T))
 
-export type Texture = {
-    ID: string;
-
-    SpriteSheet: {
-        RandomStart: boolean?;
-        TotalFrames: number?; -- Useful if you want to use a subset of the sprite sheet or the last row is not full.
-        Duration: number;
-        Bounce: boolean?;
-        Cells: Vector2;
-        Size: Vector2;
-    }?;
+type SpriteSheetDefinition = {
+    Sheets: {{ID: string, TotalFrames: number?}};
+    RandomStart: boolean?;
+    ImageSize: Vector2;
+    Duration: number;
+    CellSize: Vector2;
+    Bounce: boolean?;
 }
+
+export type Texture = string | SpriteSheetDefinition
 
 export type Particle = {
     PostStep: ((Particle) -> (any))?;
@@ -35,6 +33,7 @@ export type ParticleState = {
 
     SpriteSheetFrameOffset: number?;
     SpriteSheetCellSize: Vector2?;
+    SpriteSheet: SpriteSheetDefinition?;
 
     Completion: number;
     TimeScale: number;
