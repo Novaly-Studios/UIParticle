@@ -1,11 +1,12 @@
 export type Path<T> = ((any) -> (T))
 
 type SpriteSheetDefinition = {
-    Sheets: {{ID: string, TotalFrames: number?}};
+    SkipLastFrames: number?;
     RandomStart: boolean?;
     ImageSize: Vector2;
     Duration: number;
     CellSize: Vector2;
+    Sheets: {string};
     Bounce: boolean?;
 }
 
@@ -24,6 +25,7 @@ export type Particle = {
     Color: Path<Color3>?;
     Size: Path<Vector2>;
 
+    RootChildrenCopy: {GuiObject}?;
     RootProperties: {[string]: any}?;
     RootChildren: {GuiObject}?;
 }

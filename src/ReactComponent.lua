@@ -7,7 +7,7 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 
 local CreateParticleEmitter = require(script.Parent.CreateParticleEmitter)
 
-return function(Props: { Config: CreateParticleEmitter.EmitterConfig, Disabled: boolean? })
+return function(Props: { Props: any?, Config: CreateParticleEmitter.EmitterConfig, Disabled: boolean?, children: any? })
     local Emitter, SetEmitter = useState(nil)
     local RootRef = useRef(nil)
 
@@ -40,10 +40,19 @@ return function(Props: { Config: CreateParticleEmitter.EmitterConfig, Disabled: 
         Emitter.SetEnabled(not Disabled)
     end, {Disabled})
 
-    return element("Frame", {
+    local FrameProps = {
         BackgroundTransparency = 1;
         Size = UDim2.fromScale(1, 1);
 
         ref = RootRef;
-    })
+    }
+    local FrameTargetProps = Props.Props
+
+    if (FrameTargetProps) then
+        for Key, Value in FrameTargetProps do
+            FrameProps[Key] = Value
+        end
+    end
+
+    return element("Frame", FrameProps, Props.children or {})
 end

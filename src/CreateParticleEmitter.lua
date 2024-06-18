@@ -23,6 +23,10 @@ local function DefaultRotation()
     return 0
 end
 
+local function DefaultPosition()
+    return Vector2.new(0.5, 0.5)
+end
+
 local function DefaultColor()
     return Color3.new(1, 1, 1)
 end
@@ -52,6 +56,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
 
     local _ActiveParticles: {[ParticleState]: ImageLabel} = {}
     local _ParticleCount = 0
+    local _VisualEnabled = true
     local _Enabled = true
 
     local _BaseTimeScale = Config.TimeScale or 1
@@ -96,7 +101,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
             Active.Completion = math.min(1, Elapsed / Lifetime)
 
             local Transparency = (Base.Transparency or DefaultTransparency)(Active)
-            local Position = Base.Position(Active)
+            local Position = (Base.Position or DefaultPosition)(Active)
             local Rotation = (Base.Rotation or DefaultRotation)(Active)
             local Color = (Base.Color or DefaultColor)(Active)
             local Size = Base.Size(Active)
@@ -167,7 +172,11 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         end
     end
 
-    local function CreateParticle(Particle: Particle)
+    local function CreateParticle(Particle: Particle?)
+        if (not Particle) then
+            return
+        end
+
         local StartTime = os.clock()
 
         local Position = Particle.Position
@@ -204,7 +213,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
             ParticleRoot.Image = Texture
         end
 
-        local InitialPosition = Position(FinalParticle)
+        local InitialPosition = Position and Position(FinalParticle) or Vector2.new(0, 0)
         ParticleRoot.Position = UDim2.fromScale(InitialPosition.X, InitialPosition.Y)
 
         local AspectRatio = (if (Particle.AspectRatio ~= nil) then Particle.AspectRatio else 1)
@@ -227,6 +236,14 @@ local function CreateParticleEmitter(Config: EmitterConfig)
 
         if (RootChildren) then
             for _, Child in RootChildren do
+                Child.Parent = ParticleRoot
+            end
+        end
+
+        local RootChildrenCopy = Particle.RootChildrenCopy
+
+        if (RootChildrenCopy) then
+            for _, Child in RootChildrenCopy do
                 Child:Clone().Parent = ParticleRoot
             end
         end
@@ -240,30 +257,101 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         _ParticleCount += 1
     end
 
-    local _UpdateConnection = RunService.PostSimulation:Connect(Update)
-    local _EmitTime = 1 / Config.Rate / (Config.TimeScale or 0)
+    local _UpdateConnection = (RunService:IsRunning() and RunService.PostSimulation or RunService.Heartbeat):Connect(Update)
+    local _EmitTime = 1 / Config.Rate / (Config.TimeScale or 1)
 
     local _Accumulation = _EmitTime
     local _LastTime = os.clock()
+
+    local function Emit(Count: number)
+        for _ = 1, Count or 1 do
+            CreateParticle(if (_ParticleDefinitionIsFunction) then _ParticleDefinition(Config) else _ParticleDefinition)
+        end
+    end
+    self.Emit = Emit
 
     function self.SetEnabled(Enabled: boolean)
         _Enabled = Enabled
 
         if (Enabled) then
+            _Accumulation = 0
             _LastTime = os.clock()
-        end
-    end
 
-    local function Emit(Count: number)
-        for _ = 1, Count or 1 do
-            CreateParticle(_ParticleDefinitionIsFunction and _ParticleDefinition(Config) or _ParticleDefinition)
+            local InitialEmit = Config.InitialEmit
+
+            if (InitialEmit) then
+                Emit(InitialEmit)
+            end
         end
     end
-    self.Emit = Emit
 
     function self.GetParticleCount()
         return _ParticleCount
     end
+
+        -- Disable emitter if the GUI is not visible.
+        do
+            local Connections = {}
+            local Visibility = {}
+            local Parent = Config.EmitFrom
+            local ID = 1
+    
+            local function _UpdateVisibility()
+                local Enabled = true
+                
+                for _, Visible in Visibility do
+                    if (not Visible) then
+                        Enabled = false
+                        break
+                    end
+                end
+    
+                if (Enabled) then
+                    _Accumulation = 0
+                    _LastTime = os.clock()
+
+                    local InitialEmit = Config.InitialEmit
+
+                    if (InitialEmit) then
+                        Emit(InitialEmit)
+                    end
+                else
+                    for _, Root in _ActiveParticles do
+                        Root:Destroy()
+                    end
+    
+                    _ActiveParticles = {}
+                end
+    
+                _VisualEnabled = Enabled
+            end
+    
+            while (Parent) do
+                local TempParent = Parent
+                local TempID = ID
+    
+                if (TempParent:IsA("GuiObject")) then
+                    Visibility[TempID] = TempParent.Visible
+    
+                    table.insert(Connections, TempParent:GetPropertyChangedSignal("Visible"):Connect(function()
+                        Visibility[TempID] = TempParent.Visible
+                        _UpdateVisibility()
+                    end))
+                elseif (TempParent:IsA("GuiBase2d")) then
+                    Visibility[TempID] = TempParent.Enabled
+    
+                    table.insert(Connections, TempParent:GetPropertyChangedSignal("Enabled"):Connect(function()
+                        Visibility[TempID] = TempParent.Enabled
+                        _UpdateVisibility()
+                    end))
+                end
+    
+                ID += 1
+                Parent = Parent.Parent
+            end
+    
+            _UpdateVisibility()
+        end
 
     local _EmitTimer = task.spawn(function()
         local InitialEmit = Config.InitialEmit
@@ -274,7 +362,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         end
 
         while (true) do
-            if ((not _Enabled) or (_EmitTime == math.huge) or (_EmitCount == 0)) then
+            if ((not (_Enabled and _VisualEnabled)) or (_EmitTime == math.huge) or (_EmitCount == 0)) then
                 WaitEvent:Wait()
                 continue
             end
@@ -293,7 +381,7 @@ local function CreateParticleEmitter(Config: EmitterConfig)
 
                 _EmitCount -= 1
                 _Accumulation = New
-                CreateParticle(_ParticleDefinitionIsFunction and _ParticleDefinition(Config) or _ParticleDefinition)
+                CreateParticle(if (_ParticleDefinitionIsFunction) then _ParticleDefinition(Config) else _ParticleDefinition)
             end
 
             local NextTime = os.clock()
