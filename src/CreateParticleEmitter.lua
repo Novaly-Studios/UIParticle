@@ -135,18 +135,19 @@ local function CreateParticleEmitter(Config: EmitterConfig)
             local SpriteSheet = Active.SpriteSheet
 
             if (SpriteSheet) then
-                local Completion = math.min(Active.Completion, 0.99999999)
+                local Completion = math.min(Active.Completion, 0.99999999) / (SpriteSheet.SpeedMultiplier or 1)
 
                 local Repetitions = SpriteSheet.Repetitions or 1
+                local FreezeFrame = SpriteSheet.FreezeFrame
                 local ImageSize = SpriteSheet.ImageSize
                 local CellSize = SpriteSheet.CellSize
                 local Sheets = SpriteSheet.Sheets
-                local SheetCount = #Sheets
+                    local SheetCount = #Sheets
                 local Cells = ImageSize / CellSize
 
                 local FramesPerRepetition = (Cells.X * Cells.Y) * SheetCount
                 local TotalFrames = Repetitions * FramesPerRepetition - (SpriteSheet.SkipLastFrames or 0)
-                local CurrentRepetitionFrame = math.floor(Completion * TotalFrames) % FramesPerRepetition
+                local CurrentRepetitionFrame = FreezeFrame or (math.floor(Completion * TotalFrames) % FramesPerRepetition)
                 local SheetIndex = math.min(math.floor(CurrentRepetitionFrame / FramesPerRepetition * SheetCount) + 1, SheetCount)
                 local XOffset = CurrentRepetitionFrame % Cells.X * CellSize.X
                 local YOffset = (CurrentRepetitionFrame // Cells.Y) % Cells.Y * CellSize.Y
@@ -183,12 +184,13 @@ local function CreateParticleEmitter(Config: EmitterConfig)
         local Lifetime = Particle.Lifetime
         local Texture = Particle.Texture or DefaultTexture
         local SpriteSheet = (type(Texture) == "table" and Texture or nil)
+            local Cells = (SpriteSheet and SpriteSheet.ImageSize / SpriteSheet.CellSize)
 
         local ParticleRoot = Instance.new("ImageLabel")
         local FinalParticle = {
             ParticleDefinition = Particle;
 
-            SpriteSheetFrameOffset = (SpriteSheet and (SpriteSheet.RandomStart and RandomGen:NextInteger(0, (SpriteSheet.TotalFrames or SpriteSheet.Cells.X * SpriteSheet.Cells.Y) - 1) or 0) or nil);
+            SpriteSheetFrameOffset = (SpriteSheet and (SpriteSheet.RandomStart and RandomGen:NextInteger(0, (SpriteSheet.TotalFrames or (Cells.X * Cells.Y)) - 1) or 0) or nil);
             SpriteSheet = SpriteSheet;
 
             Completion = 0;

@@ -7,7 +7,12 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 
 local CreateParticleEmitter = require(script.Parent.CreateParticleEmitter)
 
-return function(Props: { Props: any?, Config: CreateParticleEmitter.EmitterConfig, Disabled: boolean?, children: any? })
+export type Props = {
+    Disabled: boolean?;
+    Config: CreateParticleEmitter.EmitterConfig;
+    Props: any?;
+}
+return function(Props: Props)
     local Emitter, SetEmitter = useState(nil)
     local RootRef = useRef(nil)
 

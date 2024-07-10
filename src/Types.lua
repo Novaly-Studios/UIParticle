@@ -1,10 +1,11 @@
 export type Path<T> = ((any) -> (T))
 
 type SpriteSheetDefinition = {
+    SpeedMultiplier: number?;
     SkipLastFrames: number?;
+    FreezeFrame: number?;
     RandomStart: boolean?;
     ImageSize: Vector2;
-    Duration: number;
     CellSize: Vector2;
     Sheets: {string};
     Bounce: boolean?;
